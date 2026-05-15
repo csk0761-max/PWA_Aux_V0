@@ -1,4 +1,4 @@
-import { useState, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 import { Routes, Route, useNavigate, useParams, Link } from 'react-router-dom';
 import Navigation from './components/Navigation';
 import Onboarding from './components/Onboarding';
@@ -7,10 +7,14 @@ import Auth from './components/Auth';
 import FieldSurvey from './components/FieldSurvey';
 import ListingIntelligence from './components/ListingIntelligence';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Zap, ChevronRight, Filter, Plus, ArrowLeft, FileText, BarChart3, Globe, Briefcase, LayoutDashboard, Database, TrendingUp, Upload, User as UserIcon, CheckCircle, Clock, ClipboardCheck, Activity, ShieldCheck, Scale } from 'lucide-react';
+import { 
+  MapPin, Zap, ChevronRight, Filter, Plus, ArrowLeft, FileText, 
+  BarChart3, Globe, Briefcase, LayoutDashboard, Database, TrendingUp, 
+  Upload, User as UserIcon, CheckCircle, Clock, ClipboardCheck, 
+  Activity, ShieldCheck, Scale 
+} from 'lucide-react';
 import { mockLandListings } from './data/mockData';
 import { authService } from './utils/api';
-import { useEffect } from 'react';
 
 // Role Context
 const RoleContext = createContext();
@@ -456,6 +460,23 @@ const App = () => {
   const [isHeroSeen, setIsHeroSeen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(authService.isAuthenticated());
   const [isOnboarded, setIsOnboarded] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') setInstallPrompt(null);
+  };
 
   useEffect(() => {
     if (authService.isAuthenticated()) {
@@ -502,6 +523,33 @@ const App = () => {
           </Routes>
         </AnimatePresence>
         <Navigation />
+
+        {/* PWA Install Banner for Android */}
+        <AnimatePresence>
+          {installPrompt && (
+            <motion.div 
+              initial={{ y: 100 }} 
+              animate={{ y: 0 }} 
+              exit={{ y: 100 }}
+              style={{ position: 'fixed', bottom: '80px', left: '20px', right: '20px', zIndex: 1000 }}
+            >
+              <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: 'var(--accent-orange)', border: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className="glass flex-center" style={{ width: '40px', height: '40px', borderRadius: '10px' }}>
+                     <Upload size={20} color="#fff" />
+                  </div>
+                  <div style={{ textAlign: 'left' }}>
+                    <p style={{ fontWeight: '700', color: '#fff', fontSize: '14px' }}>Install Auxilium</p>
+                    <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)' }}>Add to Home Screen</p>
+                  </div>
+                </div>
+                <button className="glass" style={{ padding: '8px 16px', borderRadius: '8px', fontWeight: '700', color: '#fff', border: '1px solid rgba(255,255,255,0.3)' }} onClick={handleInstall}>
+                  Install
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </RoleContext.Provider>
   );
